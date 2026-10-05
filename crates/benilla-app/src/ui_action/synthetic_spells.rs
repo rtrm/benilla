@@ -21,15 +21,22 @@ const TARGET_UNIT_CASTER: u32 = 1;
 /// so a display row's `effects[0]` isn't silently wrong if something comes to depend on it later.
 const EFFECT_SUMMON_CRITTER: u32 = 97;
 
-/// One companion's catalog row: the student developing this range by hand, one row per entry.
+/// One companion's catalog row, hand-written one per entry (this range has no DBC source to
+/// generate from).
 struct Companion {
     id: u32,
     name: &'static str,
+    /// MPQ path, without extension - [`SpellDisplay::icon`]'s own convention. Confirmed to exist
+    /// in the 5875 client (`cargo run -p benilla-formats --example list_chain -- petcarrier`
+    /// found `Interface\Icons\INV_Box_PetCarrier_01.blp`), the same carrier icon the item itself
+    /// already shows, rather than left blank or guessed.
+    icon: &'static str,
 }
 
 const COMPANIONS: &[Companion] = &[Companion {
     id: 60002,
     name: "Summon Companion: Black Tabby",
+    icon: "Interface\\Icons\\INV_Box_PetCarrier_01",
 }];
 
 /// Installs every reserved-range display row into `catalog`, called once after `Spell.dbc` loads
@@ -43,12 +50,12 @@ pub(crate) fn install(catalog: &mut SpellCatalog) {
             SpellDisplay {
                 id: companion.id,
                 name: companion.name.to_string(),
+                icon: Some(companion.icon.to_string()),
                 effects: [EFFECT_SUMMON_CRITTER, 0, 0],
                 implicit_target_a1: TARGET_UNIT_CASTER,
                 // `targets: 0` plus the implicit-target arm above together ask for no target at
-                // all (`cast_target_mask`) - icon stays `None` (the doc'd "not in SpellIcon.dbc"
-                // case other code already handles), casting_time_index 0 resolves to instant via
-                // the same "missing row reads 0" fallback `Spells::cast_time_unclamped_ms` uses.
+                // all (`cast_target_mask`) - casting_time_index 0 resolves to instant via the
+                // same "missing row reads 0" fallback `Spells::cast_time_unclamped_ms` uses.
                 ..Default::default()
             },
         );
