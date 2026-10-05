@@ -26,6 +26,10 @@ const BOOKTYPE_PET: &str = "pet";
 /// carries the same values and must be kept in step with this one if it ever changes.
 const COMPANION_SPELL_RANGE: std::ops::RangeInclusive<u32> = 60000..=60999;
 
+/// The reserved mount spell-id range, parallel to [`COMPANION_SPELL_RANGE`] but for mounts
+/// (`benilla-app`'s `synthetic_mounts::MOUNT_SPELL_RANGE` - same "kept in step by hand" caveat).
+const MOUNT_SPELL_RANGE: std::ops::RangeInclusive<u32> = 61000..=61999;
+
 /// `HasPetSpells`' second return when no token is resolved: the reference's literal (`0x846a40`),
 /// pushed at `0x4b44a6` when the player object does not resolve. FrameXML concatenates it, so
 /// never nil.
@@ -299,11 +303,15 @@ fn pickup_spell(model: &mut Model, id: u32, book_type: &str) -> bool {
     let Some(slot) = book_slot(model, id, book_type) else {
         return false;
     };
-    // A companion vanity pet (ARCHITECTURE.md): cast/summon directly instead of picking it up for
-    // action-bar placement, same as clicking it already casts a passive-free spell through
-    // `CastSpell` above - just reached from the plain click/drag path FrameXML's button template
-    // uses for every other spell. No cursor payload, so nothing ends up stuck on the cursor.
-    if !is_pet_book(book_type) && COMPANION_SPELL_RANGE.contains(&slot.spell_id) {
+    // A companion vanity pet or a mount (ARCHITECTURE.md): cast/summon directly instead of
+    // picking it up for action-bar placement, same as clicking it already casts a passive-free
+    // spell through `CastSpell` above - just reached from the plain click/drag path FrameXML's
+    // button template uses for every other spell. No cursor payload, so nothing ends up stuck on
+    // the cursor.
+    if !is_pet_book(book_type)
+        && (COMPANION_SPELL_RANGE.contains(&slot.spell_id)
+            || MOUNT_SPELL_RANGE.contains(&slot.spell_id))
+    {
         model.script_calls.push(ScriptCall::CastSpell {
             spell_id: slot.spell_id,
             on_self: true,

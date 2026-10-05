@@ -45,6 +45,11 @@ const GENERAL_TAB_ICON: &str = "Interface\\Icons\\Ability_Kick";
 const PETS_TAB_LINE: u32 = u32::MAX;
 const PETS_TAB_ICON: &str = "Interface\\Icons\\INV_Box_PetCarrier_01";
 
+/// The synthetic "Mounts" tab's sentinel key, one below [`PETS_TAB_LINE`] so the two can never
+/// collide with each other or with a real `SkillLine.dbc` id.
+const MOUNTS_TAB_LINE: u32 = u32::MAX - 1;
+const MOUNTS_TAB_ICON: &str = "Interface\\Icons\\Ability_Mount_RidingHorse";
+
 /// Spells learned mid-session, queued for `LEARNED_SPELL_IN_TAB` (event 510). Filled by the learn
 /// and rank-up arms (`crate::spell::net`), never the `SMSG_INITIAL_SPELLS` load, which the
 /// reference passes with `0x4b25b0`'s live-mutation flag clear. A queue because the event follows
@@ -325,12 +330,14 @@ fn build_book(
         if !catalog.get(spell_id).is_some_and(|d| d.in_spellbook()) {
             continue;
         }
-        // A companion vanity pet (ARCHITECTURE.md): the synthetic Pets tab, bypassing
-        // `SkillLine.dbc` for membership entirely. Otherwise the tab after the General collapse;
-        // with no skill-line catalog, General.
+        // A companion vanity pet or a mount (ARCHITECTURE.md): the synthetic Pets/Mounts tab,
+        // bypassing `SkillLine.dbc` for membership entirely. Otherwise the tab after the General
+        // collapse; with no skill-line catalog, General.
         let tab = if crate::ui_action::synthetic_spells::COMPANION_SPELL_RANGE.contains(&spell_id)
         {
             PETS_TAB_LINE
+        } else if crate::ui_action::synthetic_mounts::MOUNT_SPELL_RANGE.contains(&spell_id) {
+            MOUNTS_TAB_LINE
         } else {
             skill_lines
                 .map(|c| c.spell_tab(spell_id, race, class))
@@ -348,6 +355,8 @@ fn build_book(
                 ("General".to_string(), Some(GENERAL_TAB_ICON.to_string()))
             } else if line_id == PETS_TAB_LINE {
                 ("Pets".to_string(), Some(PETS_TAB_ICON.to_string()))
+            } else if line_id == MOUNTS_TAB_LINE {
+                ("Mounts".to_string(), Some(MOUNTS_TAB_ICON.to_string()))
             } else {
                 match skill_lines.and_then(|c| c.line(line_id)) {
                     Some(info) => (info.name.clone(), info.icon.clone()),
