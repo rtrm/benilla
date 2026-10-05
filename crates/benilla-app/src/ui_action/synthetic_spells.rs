@@ -4,10 +4,14 @@
 //! the spellbook's add-gate (`ui_spellbook.rs`'s `build_book`) silently drops them - a learned
 //! spell with no DBC row is otherwise invisible no matter how correctly the server taught it.
 //!
-//! This earns these spells a name and icon; the dedicated "Pets" tab grouping and the
-//! click-to-cast override (ARCHITECTURE.md build-order steps 2-3) are implemented separately, in
-//! `ui_spellbook.rs`'s `build_book` and `benilla-ui`'s `pickup_spell`, both keyed off
-//! [`COMPANION_SPELL_RANGE`].
+//! This earns these spells a name and icon; the dedicated "Pets" tab grouping (ARCHITECTURE.md
+//! build-order step 2) is implemented separately, in `ui_spellbook.rs`'s `build_book`, keyed off
+//! [`COMPANION_SPELL_RANGE`]. Click-to-cast (step 3) needed no separate code at all: the real
+//! `SpellBookFrame.lua`'s `SpellButton_OnClick` already casts directly on a plain click for every
+//! spell in the game (`drag`/`IsShiftKeyDown()` are what pick a spell up for the action bar
+//! instead) - confirmed by reading the extracted reference file itself after an earlier attempt to
+//! add a `PickupSpell` override for this broke the drag/shift-click path for no benefit, since the
+//! override only ever intercepted the same gesture that already called `CastSpell`.
 
 use benilla_formats::{SpellCatalog, SpellDisplay};
 
