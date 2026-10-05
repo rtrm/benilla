@@ -27,6 +27,25 @@ const TARGET_UNIT_CASTER: u32 = 1;
 /// so a display row's `effects[0]` isn't silently wrong if something comes to depend on it later.
 const EFFECT_SUMMON_CRITTER: u32 = 97;
 
+/// `SpellVisual.dbc` id for every "Teach Companion" spell's cast - the trainer-style effect around
+/// the player when the item teaches the pet (requested after live testing). Not invented: it's the
+/// real, standard "you learned a spell from a trainer" visual, confirmed by querying every stock
+/// `LEARN_SPELL` spell_template row and finding this value on 1228 of them - the trainer-side
+/// wrapper every ordinary class spell (Frostbolt, Polymorph, Frost Armor, ...) uses when learned.
+/// As with the summon/dismiss sound, the server's own `spellVisual1` column
+/// (`server/sql/migrations/20261005233000_world.sql`) does not reach the client over the wire by
+/// itself - this needs its own client-side catalog row too, below.
+const TEACH_VISUAL: u32 = 222;
+
+/// Every "Teach Companion" spell id: 60001 (the pilot) plus the contiguous 60067..=60135 block
+/// `20261005230630_world.sql` added one per migrated item. These never reach the spellbook - they
+/// are cast directly by the item's on-use effect and never land in `character_spell` - so unlike
+/// [`COMPANIONS`] they get no name or icon, only enough of a display row for the cast-visual system
+/// (`creature_anim::spell_visual`) to resolve [`TEACH_VISUAL`] by spell id.
+fn teach_spell_ids() -> impl Iterator<Item = u32> {
+    std::iter::once(60001).chain(60067..=60135)
+}
+
 /// One companion's catalog row. This range has no DBC source to generate from, so these were
 /// generated from the live world DB instead (not hand-typed): every stock item whose on-use spell
 /// is `SPELL_EFFECT_SUMMON_CRITTER`, resolved through the exact same progressive patch/build
@@ -447,10 +466,22 @@ const COMPANIONS: &[Companion] = &[
 ];
 
 /// Installs every reserved-range display row into `catalog`, called once after `Spell.dbc` loads
-/// (`ui_action::load_spells`). The Teach spell (60001) is deliberately not given a row: it is cast
-/// directly by the item's on-use effect (`Spell::EffectLearnSpell`, server-side) and never lands in
-/// `character_spell`, so it never reaches the spellbook's known-spell list to begin with.
+/// (`ui_action::load_spells`). Teach spells get a visual-only row ([`teach_spell_ids`]'s doc): they
+/// are cast directly by the item's on-use effect (`Spell::EffectLearnSpell`, server-side) and never
+/// land in `character_spell`, so they never reach the spellbook's known-spell list regardless of
+/// having a catalog row - only [`in_spellbook`](benilla_formats::SpellDisplay::in_spellbook)-gated,
+/// already-known spells ever show up there.
 pub(crate) fn install(catalog: &mut SpellCatalog) {
+    for id in teach_spell_ids() {
+        catalog.insert(
+            id,
+            SpellDisplay {
+                id,
+                visual: TEACH_VISUAL,
+                ..Default::default()
+            },
+        );
+    }
     for companion in COMPANIONS {
         debug_assert!(
             COMPANION_SPELL_RANGE.contains(&companion.id),
