@@ -28,6 +28,7 @@ mod feed_tests;
 mod net;
 mod ranks;
 mod state;
+mod synthetic_spells;
 pub(crate) mod toggle;
 mod weapon_icon;
 
@@ -292,7 +293,8 @@ fn load_spells(mut commands: Commands, assets: Option<Res<WorldAssets>>) {
         benilla_formats::load_spell_catalog(&mut chain)
     };
     match loaded {
-        Ok(catalog) => {
+        Ok(mut catalog) => {
+            synthetic_spells::install(&mut catalog);
             let forms = {
                 let mut chain = assets.chain.lock_recover();
                 benilla_formats::load_shapeshift_forms(&mut chain).unwrap_or_else(|e| {

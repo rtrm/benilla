@@ -328,6 +328,13 @@ impl SpellCatalog {
         self.spells.get(&id)
     }
 
+    /// Adds or replaces one display, for a spell with no `Spell.dbc` row at all - the reserved
+    /// custom id range 60000-60999 (see ARCHITECTURE.md), server-only abilities the DBC was never
+    /// going to carry. A DBC-backed id would never need this.
+    pub fn insert(&mut self, id: u32, display: SpellDisplay) {
+        self.spells.insert(id, display);
+    }
+
     /// The dispel class's name, for the aura tooltip and the debuff border's `debuffType`; `None`
     /// when `SpellDispelType.dbc`'s `[+0x28]` gate withholds it.
     pub fn dispel_name(&self, display: &SpellDisplay) -> Option<&str> {
