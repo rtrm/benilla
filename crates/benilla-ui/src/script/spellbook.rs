@@ -18,6 +18,14 @@ use super::{Model, ScriptCall};
 const BOOKTYPE_SPELL: &str = "spell";
 const BOOKTYPE_PET: &str = "pet";
 
+/// The reserved custom spell-id range (see `wowTest/ARCHITECTURE.md`) for companion vanity pets:
+/// server-only abilities with no `Spell.dbc` row, meant to be clicked to summon/dismiss directly
+/// rather than dragged to an action bar like an ordinary spell. This crate has no dependency on
+/// `benilla-formats` (the book it works over is already-resolved plain data), so the range is a
+/// small literal here too rather than a shared import - `benilla-app`'s `synthetic_spells.rs`
+/// carries the same values and must be kept in step with this one if it ever changes.
+const COMPANION_SPELL_RANGE: std::ops::RangeInclusive<u32> = 60000..=60999;
+
 /// `HasPetSpells`' second return when no token is resolved: the reference's literal (`0x846a40`),
 /// pushed at `0x4b44a6` when the player object does not resolve. FrameXML concatenates it, so
 /// never nil.
@@ -291,6 +299,17 @@ fn pickup_spell(model: &mut Model, id: u32, book_type: &str) -> bool {
     let Some(slot) = book_slot(model, id, book_type) else {
         return false;
     };
+    // A companion vanity pet (ARCHITECTURE.md): cast/summon directly instead of picking it up for
+    // action-bar placement, same as clicking it already casts a passive-free spell through
+    // `CastSpell` above - just reached from the plain click/drag path FrameXML's button template
+    // uses for every other spell. No cursor payload, so nothing ends up stuck on the cursor.
+    if !is_pet_book(book_type) && COMPANION_SPELL_RANGE.contains(&slot.spell_id) {
+        model.script_calls.push(ScriptCall::CastSpell {
+            spell_id: slot.spell_id,
+            on_self: true,
+        });
+        return false;
+    }
     // The pet arm of `0x4b3260` puts the pet's raw word on the cursor (`0x494e20`, cursor mode 4),
     // the player arm a spell id (`0x494d20`, mode 3); only the pet word drops on the pet bar.
     let payload = if is_pet_book(book_type) {

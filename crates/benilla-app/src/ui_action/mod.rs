@@ -28,7 +28,7 @@ mod feed_tests;
 mod net;
 mod ranks;
 mod state;
-mod synthetic_spells;
+pub(crate) mod synthetic_spells;
 pub(crate) mod toggle;
 mod weapon_icon;
 

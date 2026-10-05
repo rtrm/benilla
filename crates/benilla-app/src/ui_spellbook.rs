@@ -39,6 +39,12 @@ const NO_LINE: u32 = 0;
 /// Hardcoded in the reference (`0x8468f0`), extensionless for the loader; key 0 has no DBC row.
 const GENERAL_TAB_ICON: &str = "Interface\\Icons\\Ability_Kick";
 
+/// A sentinel tab key for the synthetic "Pets" tab (ARCHITECTURE.md): real `SkillLine.dbc` ids are
+/// small (vmangos's own `SKILL_NONE`/[`NO_LINE`] is the smallest, 0), so this can never collide.
+/// Bypasses `SkillLine.dbc` entirely - membership is by spell id range, not a skill-line lookup.
+const PETS_TAB_LINE: u32 = u32::MAX;
+const PETS_TAB_ICON: &str = "Interface\\Icons\\INV_Box_PetCarrier_01";
+
 /// Spells learned mid-session, queued for `LEARNED_SPELL_IN_TAB` (event 510). Filled by the learn
 /// and rank-up arms (`crate::spell::net`), never the `SMSG_INITIAL_SPELLS` load, which the
 /// reference passes with `0x4b25b0`'s live-mutation flag clear. A queue because the event follows
@@ -319,10 +325,17 @@ fn build_book(
         if !catalog.get(spell_id).is_some_and(|d| d.in_spellbook()) {
             continue;
         }
-        // The tab after the General collapse; with no skill-line catalog, General.
-        let tab = skill_lines
-            .map(|c| c.spell_tab(spell_id, race, class))
-            .unwrap_or(NO_LINE);
+        // A companion vanity pet (ARCHITECTURE.md): the synthetic Pets tab, bypassing
+        // `SkillLine.dbc` for membership entirely. Otherwise the tab after the General collapse;
+        // with no skill-line catalog, General.
+        let tab = if crate::ui_action::synthetic_spells::COMPANION_SPELL_RANGE.contains(&spell_id)
+        {
+            PETS_TAB_LINE
+        } else {
+            skill_lines
+                .map(|c| c.spell_tab(spell_id, race, class))
+                .unwrap_or(NO_LINE)
+        };
         by_line.entry(tab).or_default().push(spell_id);
     }
 
@@ -333,6 +346,8 @@ fn build_book(
         .map(|(line_id, spell_ids)| {
             let (name, texture) = if line_id == NO_LINE {
                 ("General".to_string(), Some(GENERAL_TAB_ICON.to_string()))
+            } else if line_id == PETS_TAB_LINE {
+                ("Pets".to_string(), Some(PETS_TAB_ICON.to_string()))
             } else {
                 match skill_lines.and_then(|c| c.line(line_id)) {
                     Some(info) => (info.name.clone(), info.icon.clone()),
