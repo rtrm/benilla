@@ -346,8 +346,11 @@ fn build_book(
         by_line.entry(tab).or_default().push(spell_id);
     }
 
-    // General first with its fixed name and icon, then by `SkillLine.dbc` name; an unresolved
-    // line reads "General" with no icon.
+    // General first with its fixed name and icon, then by `SkillLine.dbc` name, with the synthetic
+    // Pets/Mounts tabs pinned last (requested after live testing: a class's own spec tabs sorting
+    // alphabetically put "Mounts"/"Pets" wherever their name happened to fall among real skill-line
+    // names, e.g. ahead of "Paladin" - not what the real client's always-fixed tab order suggests).
+    // An unresolved line reads "General" with no icon.
     let mut lines: Vec<(u32, String, Option<String>, Vec<u32>)> = by_line
         .into_iter()
         .map(|(line_id, spell_ids)| {
@@ -366,7 +369,14 @@ fn build_book(
             (line_id, name, texture, spell_ids)
         })
         .collect();
-    lines.sort_by(|a, b| (a.0 != NO_LINE).cmp(&(b.0 != NO_LINE)).then(a.1.cmp(&b.1)));
+    let tab_rank = |line_id: u32| -> u8 {
+        match line_id {
+            NO_LINE => 0,
+            PETS_TAB_LINE | MOUNTS_TAB_LINE => 2,
+            _ => 1,
+        }
+    };
+    lines.sort_by(|a, b| tab_rank(a.0).cmp(&tab_rank(b.0)).then(a.1.cmp(&b.1)));
 
     let mut tabs = Vec::with_capacity(lines.len());
     let mut tab_lines = Vec::with_capacity(lines.len());
