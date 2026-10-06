@@ -469,6 +469,27 @@ const COMPANIONS: &[Companion] = &[
     },
 ];
 
+/// Each Teach spell's real taught ability: `(teach_id, summon_id)`, read off the migrations'
+/// `effectTriggerSpell1` column (`20261004120000_world.sql`'s pilot row, `20261005230630_world.sql`'s
+/// bulk rows) since a Teach spell's catalog row carries no effect data of its own to follow (above).
+/// Drives the item tooltip's "Already known" line (`ItemTemplateView::taught_spell`,
+/// `SpellCatalog::learned_spell`) the same way a trainer's wire id resolves through a real learn
+/// wrapper's `Spell.dbc` row.
+const TEACHES: &[(u32, u32)] = &[
+    (60001, 60002), (60067, 60003), (60068, 60004), (60069, 60005), (60070, 60006), (60071, 60008),
+    (60072, 60009), (60073, 60007), (60074, 60012), (60075, 60011), (60076, 60013), (60077, 60010),
+    (60078, 60024), (60079, 60018), (60080, 60017), (60081, 60022), (60082, 60021), (60083, 60025),
+    (60084, 60026), (60085, 60027), (60086, 60015), (60087, 60023), (60088, 60028), (60089, 60016),
+    (60090, 60014), (60091, 60020), (60092, 60019), (60093, 60029), (60094, 60032), (60095, 60030),
+    (60096, 60031), (60097, 60033), (60098, 60036), (60099, 60034), (60100, 60035), (60101, 60039),
+    (60102, 60037), (60103, 60038), (60104, 60040), (60105, 60041), (60106, 60041), (60107, 60041),
+    (60108, 60041), (60109, 60041), (60110, 60041), (60111, 60042), (60112, 60043), (60113, 60044),
+    (60114, 60045), (60115, 60048), (60116, 60047), (60117, 60046), (60118, 60049), (60119, 60050),
+    (60120, 60051), (60121, 60052), (60122, 60053), (60123, 60054), (60124, 60055), (60125, 60056),
+    (60126, 60057), (60127, 60058), (60128, 60059), (60129, 60060), (60130, 60061), (60131, 60062),
+    (60132, 60063), (60133, 60064), (60134, 60065), (60135, 60066),
+];
+
 /// Installs every reserved-range display row into `catalog`, called once after `Spell.dbc` loads
 /// (`ui_action::load_spells`). Teach spells get a visual-only row ([`teach_spell_ids`]'s doc): they
 /// are cast directly by the item's on-use effect (`Spell::EffectLearnSpell`, server-side) and never
@@ -485,6 +506,9 @@ pub(crate) fn install(catalog: &mut SpellCatalog) {
                 ..Default::default()
             },
         );
+    }
+    for &(teach_id, summon_id) in TEACHES {
+        catalog.insert_learned_spell(teach_id, summon_id);
     }
     for companion in COMPANIONS {
         debug_assert!(

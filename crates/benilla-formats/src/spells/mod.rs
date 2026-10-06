@@ -335,6 +335,16 @@ impl SpellCatalog {
         self.spells.insert(id, display);
     }
 
+    /// Registers a learn wrapper's taught ability for a spell with no `Spell.dbc` row, mirroring
+    /// what [`Self::from_displays_and_effects`]'s learn-effect scan would have found had one
+    /// existed. A synthetic Teach spell ([`Self::insert`]'s custom-id case) carries no
+    /// `effect_trigger_spell` of its own, so [`Self::learned_spell`] would otherwise never resolve
+    /// it - this is what lets the item tooltip's "Already known" line follow a Teach spell to the
+    /// Summon spell it grants.
+    pub fn insert_learned_spell(&mut self, teach_id: u32, taught_id: u32) {
+        self.learned_spell.insert(teach_id, taught_id);
+    }
+
     /// The dispel class's name, for the aura tooltip and the debuff border's `debuffType`; `None`
     /// when `SpellDispelType.dbc`'s `[+0x28]` gate withholds it.
     pub fn dispel_name(&self, display: &SpellDisplay) -> Option<&str> {

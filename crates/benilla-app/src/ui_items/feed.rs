@@ -243,6 +243,14 @@ fn template_view(
             .filter(|s| s.spell_id != 0)
             .filter_map(|s| spell_text(s.spell_id).map(|n| (s.trigger, s.spell_id, n)))
             .collect(),
+        // The on-use wrapper's real taught ability (a recipe-pattern item's Learn spell, e.g. our
+        // own Teach-Companion/Teach-Mount spells, which carry no `Spell.dbc` row of their own to
+        // follow): `SpellCatalog::learned_spell` resolves it the same way a trainer's wire id does.
+        taught_spell: t
+            .spells
+            .iter()
+            .find(|s| s.trigger == 0 && s.spell_id != 0)
+            .and_then(|s| spells.and_then(|sp| sp.catalog.learned_spell(s.spell_id))),
         charges: charges_count(&t.spells),
         description: t.description.clone(),
         page_text: t.page_text,
